@@ -125,6 +125,26 @@ export interface Venue {
   createdAt: string;
   upcomingEvents?: Event[];
   events?: Event[];
+  venueType?: string;
+  upcomingEventsCount?: number;
+}
+
+export interface Deal {
+  id: string;
+  djId: string;
+  djName: string;
+  djAvatarUrl?: string;
+  venueId: string;
+  venueName: string;
+  venueCity: string;
+  eventDate: string;
+  amount: number;
+  currency: string;
+  status: 'pending' | 'accepted' | 'rejected' | 'completed' | 'cancelled';
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  paymentStatus: 'unpaid' | 'partial' | 'paid';
 }
 
 export interface VenueDeal {
@@ -501,6 +521,60 @@ export interface EventPlanningPack {
   } | null;
 }
 
+export interface EventQuotation {
+  id: number | string;
+  requestId?: number | string;
+  title: string;
+  lineItems: Array<{ name: string; amount: number }>;
+  notes?: string;
+  total: number;
+  currency: string;
+  status: 'proposed' | 'selected' | 'paid_cash' | 'paid_wallet' | 'declined';
+  createdAt: string;
+}
+
+export interface EventPlannerRevenueLog {
+  id: number | string;
+  requestId?: number | string;
+  quotationId?: number | string;
+  amount: number;
+  currency: string;
+  status: 'locked' | 'made';
+  paymentMethod?: 'cash' | 'wallet';
+  description?: string;
+  createdAt: string;
+  quotation?: {
+    id: number | string;
+    title: string;
+    total: number;
+  } | null;
+}
+
+export interface EventQuoteRequest {
+  id: number | string;
+  eventDate: string;
+  startTime: string;
+  endTime: string;
+  location: string;
+  selections: Record<string, string>;
+  addons: string[];
+  note?: string;
+  quoteFee: number;
+  quoteFeePaid: boolean;
+  status: 'submitted' | 'quoted' | 'selected' | 'canceled';
+  selectedQuotationId?: number | string;
+  paymentMethod?: 'cash' | 'wallet';
+  createdAt: string;
+  pack?: EventPlanningPack | null;
+  planner?: EventPlanningPack['planner'];
+  requester?: {
+    id: number | string;
+    name?: string;
+    email: string;
+  } | null;
+  quotations?: EventQuotation[];
+}
+
 export type RootStackParamList = {
   Auth: undefined;
   Main: undefined;
@@ -534,10 +608,12 @@ export type DiscoverStackParamList = {
   DJs: undefined;
   DJProfile: { djId: string };
   Venues: undefined;
+  VenueDetail: { venueId: string };
   Events: undefined;
   EventDetail: { eventId: string };
   Search: undefined;
   VenueBroadcast: { eventId?: string } | undefined;
+  PlanYourEvent: undefined;
 };
 
 export type LiveStackParamList = {

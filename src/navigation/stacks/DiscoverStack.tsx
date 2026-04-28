@@ -8,6 +8,8 @@ import EventsScreen from '../../screens/discover/EventsScreen';
 import EventDetailScreen from '../../screens/discover/EventDetailScreen';
 import SearchScreen from '../../screens/discover/SearchScreen';
 import VenueBroadcastScreen from '../../screens/venue/VenueBroadcastScreen';
+import VenueDetailScreen from '../../screens/discover/VenueDetailScreen';
+import PlanYourEventScreen from '../../screens/discover/PlanYourEventScreen';
 
 const Stack = createNativeStackNavigator<DiscoverStackParamList>();
 
@@ -20,7 +22,9 @@ export default function DiscoverStack() {
       <Stack.Screen name="Events" component={EventsScreen} />
       <Stack.Screen name="EventDetail" component={EventDetailScreen} />
       <Stack.Screen name="Search" component={SearchScreen} />
+      <Stack.Screen name="VenueDetail" component={VenueDetailScreen} />
       <Stack.Screen name="VenueBroadcast" component={VenueBroadcastScreen} />
+      <Stack.Screen name="PlanYourEvent" component={PlanYourEventScreen} />
     </Stack.Navigator>
   );
 }

@@ -1,5 +1,5 @@
 import client from './client';
-import { ApiResponse, PaginatedResponse, RankingEntry, Competition, CompetitionEntry } from '../types';
+import { ApiResponse, PaginatedResponse, RankingEntry, Competition, CompetitionEntry, Venue } from '../types';
 import { BlogPost, ForumCategory, ForumThread } from '../types';
 
 type AnyRecord = Record<string, unknown>;
@@ -300,5 +300,10 @@ export const getMyVenues = async (): Promise<Array<{ id: string; name: string; c
 
 export const getVenueAnalytics = async (period = '30d') => {
   const { data } = await client.get('/venue/analytics', { params: { period } });
+  return data;
+};
+
+export const getVenueDetail = async (id: string | number): Promise<Venue> => {
+  const { data } = await client.get<Venue>(`/venues/${id}`);
   return data;
 };
