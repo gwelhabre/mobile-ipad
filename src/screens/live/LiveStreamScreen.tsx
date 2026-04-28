@@ -9,6 +9,9 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Modal,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +19,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { LiveStackParamList } from '../../types';
 import Avatar from '../../components/common/Avatar';
 import Badge from '../../components/common/Badge';
+import { sendTip } from '../../api/tips';
+
+const TIP_PRESETS = [2, 5, 10, 20];
 
 type Route = RouteProp<LiveStackParamList, 'LiveStream'>;
 
@@ -48,10 +54,15 @@ export default function LiveStreamScreen() {
   const [chat, setChat] = useState(MOCK_CHAT);
   const [showGifts, setShowGifts] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [tipModal, setTipModal] = useState(false);
+  const [tipAmount, setTipAmount] = useState('5');
+  const [tipMessage, setTipMessage] = useState('');
+  const [tipLoading, setTipLoading] = useState(false);
 
   const streamInfo = {
     id: route.params.streamId,
-    djName: 'DJ Pulse',
+    djId: route.params.djId,
+    djName: route.params.djName ?? 'DJ Pulse',
     title: 'Tech House Massive — Live from London',
     genre: 'Tech House',
     viewerCount: 2840,
@@ -69,6 +80,42 @@ export default function LiveStreamScreen() {
       type: 'message',
     }]);
     setMessage('');
+  };
+
+  const handleTip = async () => {
+    const amount = Number(tipAmount.replace(',', '.'));
+    if (!Number.isFinite(amount) || amount <= 0) {
+      Alert.alert('Invalid amount', 'Enter a tip amount greater than 0.');
+      return;
+    }
+    if (amount > 20) {
+      Alert.alert('Tip limit', 'Private tips are capped at 20 EUR per DJ per stream/event.');
+      return;
+    }
+    if (!streamInfo.djId) {
+      Alert.alert('Tip unavailable', 'This stream is missing DJ info.');
+      return;
+    }
+    setTipLoading(true);
+    try {
+      const result = await sendTip({
+        djId: streamInfo.djId,
+        amount,
+        liveId: streamInfo.id,
+        message: tipMessage.trim() || undefined,
+      });
+      setTipModal(false);
+      setTipAmount('5');
+      setTipMessage('');
+      Alert.alert(
+        'Tip sent',
+        `DJ receives ${result.sellerAmount.toFixed(2)} ${result.currency}; platform commission ${result.platformAmount.toFixed(2)} ${result.currency} supports the local DJing ecosystem.`,
+      );
+    } catch (err: any) {
+      Alert.alert('Error', err?.response?.data?.error || err?.response?.data?.message || 'Failed to send tip.');
+    } finally {
+      setTipLoading(false);
+    }
   };
 
   const sendGift = (gift: typeof GIFTS[0]) => {
@@ -153,6 +200,10 @@ export default function LiveStreamScreen() {
               >
                 <Ionicons name={isFollowing ? 'heart' : 'heart-outline'} size={16} color={isFollowing ? '#ef4444' : '#94a3b8'} />
                 <Text style={styles.streamActionText}>{isFollowing ? 'Following' : 'Follow'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.tipBtn} onPress={() => setTipModal(true)}>
+                <Ionicons name="cash-outline" size={16} color="#10b981" />
+                <Text style={styles.tipBtnText}>Tip</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.shareBtn}>
                 <Ionicons name="share-social-outline" size={16} color="#94a3b8" />
@@ -243,6 +294,60 @@ export default function LiveStreamScreen() {
           </View>
         </KeyboardAvoidingView>
       </View>
+
+      <Modal visible={tipModal} transparent animationType="fade" onRequestClose={() => setTipModal(false)}>
+        <View style={styles.tipOverlay}>
+          <View style={styles.tipCard}>
+            <View style={styles.tipHeader}>
+              <Text style={styles.tipTitle}>Tip the DJ</Text>
+              <TouchableOpacity onPress={() => setTipModal(false)} style={styles.tipClose}>
+                <Ionicons name="close" size={20} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.tipSubtitle}>Private tip — capped at 20 EUR per DJ per stream/event.</Text>
+            <View style={styles.tipPresets}>
+              {TIP_PRESETS.map((p) => {
+                const active = String(p) === tipAmount;
+                return (
+                  <TouchableOpacity
+                    key={p}
+                    style={[styles.tipPreset, active && styles.tipPresetActive]}
+                    onPress={() => setTipAmount(String(p))}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.tipPresetText, active && styles.tipPresetTextActive]}>{p}€</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <TextInput
+              style={styles.tipInput}
+              value={tipAmount}
+              onChangeText={setTipAmount}
+              keyboardType="decimal-pad"
+              placeholder="Amount"
+              placeholderTextColor="#4b5563"
+            />
+            <TextInput
+              style={[styles.tipInput, { minHeight: 60 }]}
+              value={tipMessage}
+              onChangeText={setTipMessage}
+              placeholder="Add a message (optional)"
+              placeholderTextColor="#4b5563"
+              multiline
+              textAlignVertical="top"
+            />
+            <TouchableOpacity
+              style={[styles.tipSendBtn, tipLoading && styles.tipSendBtnDisabled]}
+              onPress={handleTip}
+              disabled={tipLoading}
+              activeOpacity={0.85}
+            >
+              {tipLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.tipSendText}>Send Tip</Text>}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -482,4 +587,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  tipBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 14, paddingVertical: 7, borderRadius: 8,
+    backgroundColor: 'rgba(16,185,129,0.12)', borderWidth: 1, borderColor: '#10b98155',
+  },
+  tipBtnText: { fontSize: 13, color: '#10b981', fontWeight: '700' },
+  tipOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.72)', justifyContent: 'center', padding: 32 },
+  tipCard: { backgroundColor: '#12121a', borderRadius: 18, borderWidth: 1, borderColor: '#1f1f2e', padding: 22, gap: 14, maxWidth: 480, alignSelf: 'center', width: '100%' },
+  tipHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  tipTitle: { color: '#fff', fontSize: 20, fontWeight: '900' },
+  tipClose: { width: 34, height: 34, borderRadius: 10, backgroundColor: '#1f1f2e', alignItems: 'center', justifyContent: 'center' },
+  tipSubtitle: { color: '#94a3b8', fontSize: 13 },
+  tipPresets: { flexDirection: 'row', gap: 10 },
+  tipPreset: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: '#13131a', borderWidth: 1, borderColor: '#1e1e2e', alignItems: 'center' },
+  tipPresetActive: { borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.12)' },
+  tipPresetText: { color: '#94a3b8', fontSize: 15, fontWeight: '700' },
+  tipPresetTextActive: { color: '#10b981' },
+  tipInput: { backgroundColor: '#0a0a0f', borderWidth: 1, borderColor: '#1e1e2e', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, color: '#fff', fontSize: 14 },
+  tipSendBtn: { backgroundColor: '#10b981', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 6 },
+  tipSendBtnDisabled: { opacity: 0.6 },
+  tipSendText: { color: '#fff', fontSize: 15, fontWeight: '800' },
 });

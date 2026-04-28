@@ -42,7 +42,7 @@ export default function LiveDirectoryScreen() {
   const renderStreamCard = ({ item }: { item: typeof MOCK_STREAMS[0] }) => (
     <TouchableOpacity
       style={styles.streamCard}
-      onPress={() => navigation.navigate('LiveStream', { streamId: item.id })}
+      onPress={() => navigation.navigate('LiveStream', { streamId: item.id, djName: item.djName })}
       activeOpacity={0.8}
     >
       {/* Thumbnail */}

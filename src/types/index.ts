@@ -618,7 +618,7 @@ export type DiscoverStackParamList = {
 
 export type LiveStackParamList = {
   LiveDirectory: undefined;
-  LiveStream: { streamId: string };
+  LiveStream: { streamId: string; djId?: string; djName?: string };
 };
 
 export type WalletStackParamList = {

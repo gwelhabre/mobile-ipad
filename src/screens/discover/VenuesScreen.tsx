@@ -175,6 +175,7 @@ export default function VenuesScreen() {
                   onEventPress={(event) => navigation.navigate('EventDetail', { eventId: event.id })}
                   onFollow={handleFollowVenue}
                   followLoading={followLoading}
+                  onOpenFullPage={() => navigation.navigate('VenueDetail', { venueId: String(selectedVenue.id) })}
                 />
               )}
             </>
@@ -197,11 +198,13 @@ function VenueDetail({
   onEventPress,
   onFollow,
   followLoading,
+  onOpenFullPage,
 }: {
   venue: Venue;
   onEventPress: (event: Event) => void;
   onFollow: () => void;
   followLoading: boolean;
+  onOpenFullPage: () => void;
 }) {
   const upcomingEvents = (venue.upcomingEvents ?? venue.events ?? []) as Event[];
 
@@ -222,6 +225,13 @@ function VenueDetail({
           variant={venue.isFollowing ? 'outline' : 'primary'}
           size="sm"
           icon={venue.isFollowing ? 'checkmark-circle' : 'heart-outline'}
+        />
+        <Button
+          label="Open Full Page"
+          onPress={onOpenFullPage}
+          variant="outline"
+          size="sm"
+          icon="open-outline"
         />
         {typeof venue.followersCount === 'number' ? (
           <Text style={styles.followersText}>{venue.followersCount.toLocaleString()} followers</Text>
