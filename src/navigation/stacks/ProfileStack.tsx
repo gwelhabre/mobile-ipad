@@ -9,6 +9,7 @@ import DeleteAccountScreen from '../../screens/profile/DeleteAccountScreen';
 import BlockedUsersScreen from '../../screens/profile/BlockedUsersScreen';
 import EventPlannerDashboardScreen from '../../screens/eventPlanner/EventPlannerDashboardScreen';
 import InfoScreen from '../../screens/info/InfoScreen';
+import AdminScreen from '../../screens/admin/AdminScreen';
 
 const Stack = createNativeStackNavigator<ProfileStackParamList>();
 
@@ -23,6 +24,7 @@ export default function ProfileStack() {
       <Stack.Screen name="BlockedUsers" component={BlockedUsersScreen} />
       <Stack.Screen name="EventPlannerDashboard" component={EventPlannerDashboardScreen} />
       <Stack.Screen name="Info" component={InfoScreen} />
+      <Stack.Screen name="Admin" component={AdminScreen} />
     </Stack.Navigator>
   );
 }

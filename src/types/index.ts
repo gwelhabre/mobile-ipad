@@ -670,4 +670,5 @@ export type ProfileStackParamList = {
   BlockedUsers: undefined;
   EventPlannerDashboard: undefined;
   Info: { topic: string };
+  Admin: undefined;
 };
