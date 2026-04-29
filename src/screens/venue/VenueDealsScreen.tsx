@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, FlatList, StyleSheet, TouchableOpacity, RefreshControl, Alert,
+  View, Text, FlatList, StyleSheet, TouchableOpacity, RefreshControl, Alert, Modal, TextInput, ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { venueDealApi } from '../../api/events';
+import { createVenueDeal, getMyVenues } from '../../api/rankings';
+import { getDJs } from '../../api/dj';
+import { DJProfile } from '../../types';
 import PageHeader from '../../components/layout/PageHeader';
 import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
+import Button from '../../components/common/Button';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
 import Avatar from '../../components/common/Avatar';
@@ -33,6 +37,67 @@ export default function VenueDealsScreen() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
+  const [modalVisible, setModalVisible] = useState(false);
+  const [venues, setVenues] = useState<Array<{ id: string; name: string; city?: string | null }>>([]);
+  const [selectedVenueId, setSelectedVenueId] = useState('');
+  const [djSearch, setDjSearch] = useState('');
+  const [djs, setDjs] = useState<DJProfile[]>([]);
+  const [selectedDj, setSelectedDj] = useState<DJProfile | null>(null);
+  const [proposedFee, setProposedFee] = useState('');
+  const [eventDate, setEventDate] = useState('');
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const loadVenues = async () => {
+    try {
+      const data = await getMyVenues();
+      setVenues(data);
+      if (data.length === 1) setSelectedVenueId(String(data[0].id));
+    } catch {
+      setVenues([]);
+    }
+  };
+
+  const searchDjs = async (q: string) => {
+    setDjSearch(q);
+    if (q.trim().length < 2) { setDjs([]); return; }
+    try {
+      const data = await getDJs(q.trim());
+      setDjs(data.slice(0, 10));
+    } catch {
+      setDjs([]);
+    }
+  };
+
+  const submitDeal = async () => {
+    if (!selectedDj) {
+      Alert.alert('Pick a DJ', 'Search and select a DJ to propose to.');
+      return;
+    }
+    if (!selectedVenueId) {
+      Alert.alert('Pick a venue', 'Select one of your venues.');
+      return;
+    }
+    setSaving(true);
+    try {
+      await createVenueDeal({
+        djId: String(selectedDj.id),
+        venueId: selectedVenueId,
+        proposedFee: proposedFee.trim() ? Number(proposedFee) : undefined,
+        eventDate: eventDate.trim() || undefined,
+        notes: notes.trim() || undefined,
+      });
+      setSelectedDj(null); setDjSearch(''); setDjs([]); setProposedFee(''); setEventDate(''); setNotes('');
+      setModalVisible(false);
+      Alert.alert('Proposal sent', `${selectedDj.displayName ?? 'DJ'} has been notified.`);
+    } catch (err: any) {
+      Alert.alert('Could not propose deal', err?.response?.data?.error ?? 'Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  useEffect(() => { loadVenues(); }, []);
 
   const load = useCallback(async (isRefresh = false) => {
     if (!isRefresh) setLoading(true);
@@ -112,7 +177,15 @@ export default function VenueDealsScreen() {
 
   return (
     <View style={styles.container}>
-      <PageHeader title="Booking Deals" subtitle={`${deals.length} total`} />
+      <PageHeader
+        title="Booking Deals"
+        subtitle={`${deals.length} total`}
+        actions={[
+          { element: (
+            <Button label="Propose Deal" onPress={() => setModalVisible(true)} variant="primary" size="sm" icon="add-circle" />
+          ) },
+        ]}
+      />
 
       <View style={styles.filters}>
         {(['all', 'active', 'completed'] as const).map(f => (
@@ -138,6 +211,75 @@ export default function VenueDealsScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(true); }} tintColor="#a855f7" />}
         ListEmptyComponent={<EmptyState icon="briefcase-outline" message="No deals yet" />}
       />
+
+      <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={() => setModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Propose Deal</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeBtn}>
+                <Ionicons name="close" size={20} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView contentContainerStyle={styles.modalBody}>
+              {venues.length > 1 && (
+                <>
+                  <Text style={styles.modalLabel}>Venue</Text>
+                  <View style={styles.modalChipRow}>
+                    {venues.map((v) => (
+                      <TouchableOpacity
+                        key={v.id}
+                        style={[styles.modalChip, String(v.id) === selectedVenueId && styles.modalChipActive]}
+                        onPress={() => setSelectedVenueId(String(v.id))}
+                      >
+                        <Text style={[styles.modalChipText, String(v.id) === selectedVenueId && styles.modalChipTextActive]}>{v.name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </>
+              )}
+
+              <Text style={styles.modalLabel}>DJ</Text>
+              {selectedDj ? (
+                <View style={styles.selectedDj}>
+                  <Avatar uri={selectedDj.avatarUrl} name={selectedDj.displayName ?? 'DJ'} size={36} />
+                  <Text style={styles.selectedDjName}>{selectedDj.displayName}</Text>
+                  <TouchableOpacity onPress={() => setSelectedDj(null)}>
+                    <Ionicons name="close-circle" size={20} color="#6b7280" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <>
+                  <TextInput
+                    style={styles.modalInput}
+                    value={djSearch}
+                    onChangeText={searchDjs}
+                    placeholder="Search DJs..."
+                    placeholderTextColor="#4b5563"
+                  />
+                  {djs.map((dj) => (
+                    <TouchableOpacity key={String(dj.id)} style={styles.djRow} onPress={() => { setSelectedDj(dj); setDjs([]); setDjSearch(''); }}>
+                      <Avatar uri={dj.avatarUrl} name={dj.displayName ?? 'DJ'} size={32} />
+                      <Text style={styles.djRowName}>{dj.displayName}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </>
+              )}
+
+              <Text style={styles.modalLabel}>Proposed Fee</Text>
+              <TextInput style={styles.modalInput} value={proposedFee} onChangeText={setProposedFee} placeholder="e.g. 800" placeholderTextColor="#4b5563" keyboardType="decimal-pad" />
+
+              <Text style={styles.modalLabel}>Event Date</Text>
+              <TextInput style={styles.modalInput} value={eventDate} onChangeText={setEventDate} placeholder="YYYY-MM-DD" placeholderTextColor="#4b5563" />
+
+              <Text style={styles.modalLabel}>Notes</Text>
+              <TextInput style={[styles.modalInput, { minHeight: 80 }]} value={notes} onChangeText={setNotes} placeholder="Set length, equipment..." placeholderTextColor="#4b5563" multiline textAlignVertical="top" />
+
+              <Button label={saving ? 'Sending...' : 'Send Proposal'} onPress={submitDeal} loading={saving} />
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -167,4 +309,21 @@ const styles = StyleSheet.create({
   counterText: { color: '#f59e0b', fontSize: 13, fontWeight: '600' },
   rejectBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, padding: 8, borderRadius: 10, backgroundColor: '#ef444415', borderWidth: 1, borderColor: '#ef444430' },
   rejectText: { color: '#ef4444', fontSize: 13, fontWeight: '600' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.72)', justifyContent: 'center', padding: 32 },
+  modalCard: { maxHeight: '88%', backgroundColor: '#12121a', borderRadius: 18, borderWidth: 1, borderColor: '#263241', padding: 22, maxWidth: 540, alignSelf: 'center', width: '100%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+  modalTitle: { color: '#f1f5f9', fontSize: 20, fontWeight: '900' },
+  closeBtn: { width: 34, height: 34, borderRadius: 10, backgroundColor: '#1f1f2e', alignItems: 'center', justifyContent: 'center' },
+  modalBody: { gap: 12 },
+  modalLabel: { color: '#94a3b8', fontSize: 11, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 4 },
+  modalInput: { backgroundColor: '#0a0a0f', borderWidth: 1, borderColor: '#1e1e2e', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, color: '#f1f5f9', fontSize: 14 },
+  modalChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  modalChip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, borderWidth: 1, borderColor: '#1e1e2e', backgroundColor: '#13131a' },
+  modalChipActive: { borderColor: '#7c3aed', backgroundColor: 'rgba(124,58,237,0.12)' },
+  modalChipText: { color: '#94a3b8', fontSize: 12, fontWeight: '700' },
+  modalChipTextActive: { color: '#a78bfa' },
+  selectedDj: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10, backgroundColor: 'rgba(124,58,237,0.08)', borderWidth: 1, borderColor: '#7c3aed55', borderRadius: 12 },
+  selectedDjName: { flex: 1, color: '#f1f5f9', fontSize: 14, fontWeight: '700' },
+  djRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 8, borderRadius: 10, backgroundColor: '#13131a' },
+  djRowName: { color: '#e5e7eb', fontSize: 13, fontWeight: '600' },
 });

@@ -5,11 +5,16 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
+  Modal,
+  TextInput,
+  ScrollView,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import PageHeader from '../../components/layout/PageHeader';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
+import { createDJSet } from '../../api/dj';
 
 const MOCK_SETS = Array.from({ length: 12 }, (_, i) => ({
   id: `set-${i}`,
@@ -24,6 +29,40 @@ const MOCK_SETS = Array.from({ length: 12 }, (_, i) => ({
 
 export default function DJSetsScreen() {
   const [sets, setSets] = useState(MOCK_SETS);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [coverImage, setCoverImage] = useState('');
+  const [price, setPrice] = useState('0');
+  const [accessType, setAccessType] = useState<'free' | 'paid' | 'subscription'>('free');
+  const [saving, setSaving] = useState(false);
+
+  const submitSet = async () => {
+    if (!title.trim()) {
+      Alert.alert('Missing title', 'Set title is required.');
+      return;
+    }
+    setSaving(true);
+    try {
+      await createDJSet({
+        title: title.trim(),
+        description: description.trim() || undefined,
+        previewUrl: previewUrl.trim() || undefined,
+        coverImage: coverImage.trim() || undefined,
+        price: accessType === 'paid' ? Number(price) || 0 : 0,
+        accessType,
+        visibility: 'public',
+      });
+      setTitle(''); setDescription(''); setPreviewUrl(''); setCoverImage(''); setPrice('0'); setAccessType('free');
+      setModalVisible(false);
+      Alert.alert('Set published', 'Your set is now visible.');
+    } catch (err: any) {
+      Alert.alert('Could not publish', err?.response?.data?.error ?? 'Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const totalSales = sets.reduce((sum, s) => sum + s.salesCount, 0);
   const totalRevenue = sets.reduce((sum, s) => sum + s.price * s.salesCount, 0);
@@ -43,7 +82,7 @@ export default function DJSetsScreen() {
         subtitle={`${sets.length} sets • ${totalSales.toLocaleString()} total sales`}
         actions={[
           { element: (
-            <Button label="Upload Set" onPress={() => {}} variant="primary" size="sm" icon="add-circle" />
+            <Button label="Upload Set" onPress={() => setModalVisible(true)} variant="primary" size="sm" icon="add-circle" />
           ) },
         ]}
       />
@@ -135,6 +174,37 @@ export default function DJSetsScreen() {
         showsVerticalScrollIndicator={false}
         ListFooterComponent={<View style={{ height: 24 }} />}
       />
+
+      <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={() => setModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>New Set</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeBtn}>
+                <Ionicons name="close" size={20} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView contentContainerStyle={styles.modalBody}>
+              <TextInput style={styles.modalInput} value={title} onChangeText={setTitle} placeholder="Set title" placeholderTextColor="#4b5563" />
+              <TextInput style={[styles.modalInput, { minHeight: 80 }]} value={description} onChangeText={setDescription} placeholder="Description" placeholderTextColor="#4b5563" multiline textAlignVertical="top" />
+              <TextInput style={styles.modalInput} value={previewUrl} onChangeText={setPreviewUrl} placeholder="Preview URL (audio)" placeholderTextColor="#4b5563" autoCapitalize="none" />
+              <TextInput style={styles.modalInput} value={coverImage} onChangeText={setCoverImage} placeholder="Cover image URL" placeholderTextColor="#4b5563" autoCapitalize="none" />
+              <Text style={styles.modalLabel}>Access</Text>
+              <View style={styles.chipRow}>
+                {(['free', 'paid', 'subscription'] as const).map((t) => (
+                  <TouchableOpacity key={t} style={[styles.chip, accessType === t && styles.chipActive]} onPress={() => setAccessType(t)}>
+                    <Text style={[styles.chipText, accessType === t && styles.chipTextActive]}>{t}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {accessType === 'paid' && (
+                <TextInput style={styles.modalInput} value={price} onChangeText={setPrice} placeholder="Price" placeholderTextColor="#4b5563" keyboardType="decimal-pad" />
+              )}
+              <Button label={saving ? 'Publishing...' : 'Publish Set'} onPress={submitSet} loading={saving} />
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -208,4 +278,17 @@ const styles = StyleSheet.create({
     borderColor: '#1e1e2e',
   },
   deleteBtn: { borderColor: 'rgba(239,68,68,0.2)' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.72)', justifyContent: 'center', padding: 32 },
+  modalCard: { maxHeight: '88%', backgroundColor: '#12121a', borderRadius: 18, borderWidth: 1, borderColor: '#263241', padding: 22, maxWidth: 520, alignSelf: 'center', width: '100%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+  modalTitle: { color: '#f1f5f9', fontSize: 20, fontWeight: '900' },
+  closeBtn: { width: 34, height: 34, borderRadius: 10, backgroundColor: '#1f1f2e', alignItems: 'center', justifyContent: 'center' },
+  modalBody: { gap: 12 },
+  modalInput: { backgroundColor: '#0a0a0f', borderWidth: 1, borderColor: '#1e1e2e', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, color: '#f1f5f9', fontSize: 14 },
+  modalLabel: { color: '#94a3b8', fontSize: 11, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 4 },
+  chipRow: { flexDirection: 'row', gap: 8 },
+  chip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, borderWidth: 1, borderColor: '#1e1e2e', backgroundColor: '#13131a' },
+  chipActive: { borderColor: '#7c3aed', backgroundColor: 'rgba(124,58,237,0.12)' },
+  chipText: { color: '#94a3b8', fontSize: 12, fontWeight: '700' },
+  chipTextActive: { color: '#a78bfa' },
 });
