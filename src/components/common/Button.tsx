@@ -10,20 +10,41 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 type Variant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
+/** Tablet API alias variants */
+type TabletVariant = 'filled' | 'outlined' | 'text' | 'tonal';
 type Size = 'sm' | 'md' | 'lg';
 
 interface ButtonProps {
-  label: string;
+  /** Either `label` or `title` works (cross-platform alias). */
+  label?: string;
+  title?: string;
   onPress: () => void;
-  variant?: Variant;
+  variant?: Variant | TabletVariant;
   size?: Size;
+  /** Either `loading` or `isLoading` works. */
   loading?: boolean;
+  isLoading?: boolean;
   disabled?: boolean;
-  icon?: keyof typeof Ionicons.glyphMap;
+  icon?: keyof typeof Ionicons.glyphMap | string;
   iconPosition?: 'left' | 'right';
+  fullWidth?: boolean;
+  /** Optional override color (cross-platform compat). */
+  color?: string;
   style?: ViewStyle;
   textStyle?: TextStyle;
 }
+
+const VARIANT_ALIASES: Record<TabletVariant, Variant> = {
+  filled: 'primary',
+  outlined: 'outline',
+  text: 'ghost',
+  tonal: 'ghost',
+};
+
+const normalizeVariant = (v: Variant | TabletVariant): Variant => {
+  if (v === 'filled' || v === 'outlined' || v === 'text' || v === 'tonal') return VARIANT_ALIASES[v];
+  return v;
+};
 
 const VARIANT_STYLES: Record<Variant, { bg: string; border: string; text: string }> = {
   primary: { bg: '#7c3aed', border: '#7c3aed', text: '#ffffff' },
@@ -41,48 +62,58 @@ const SIZE_STYLES: Record<Size, { paddingH: number; paddingV: number; fontSize: 
 
 export default function Button({
   label,
+  title,
   onPress,
   variant = 'primary',
   size = 'md',
-  loading = false,
+  loading,
+  isLoading,
   disabled = false,
   icon,
   iconPosition = 'left',
+  fullWidth = false,
+  color,
   style,
   textStyle,
 }: ButtonProps) {
-  const v = VARIANT_STYLES[variant];
+  const text = label ?? title ?? '';
+  const busy = loading ?? isLoading ?? false;
+  const v = VARIANT_STYLES[normalizeVariant(variant)];
   const s = SIZE_STYLES[size];
+  const bg = color && (variant === 'primary' || variant === 'filled' || variant === 'danger' || variant === 'secondary') ? color : v.bg;
+  const border = color ? color : v.border;
+  const textColor = color && (variant === 'outline' || variant === 'outlined' || variant === 'ghost' || variant === 'text' || variant === 'tonal') ? color : v.text;
 
   return (
     <TouchableOpacity
       style={[
         styles.button,
         {
-          backgroundColor: v.bg,
-          borderColor: v.border,
+          backgroundColor: bg,
+          borderColor: border,
           paddingHorizontal: s.paddingH,
           paddingVertical: s.paddingV,
-          opacity: disabled || loading ? 0.5 : 1,
+          opacity: disabled || busy ? 0.5 : 1,
         },
+        fullWidth && { alignSelf: 'stretch', width: '100%' },
         style,
       ]}
       onPress={onPress}
-      disabled={disabled || loading}
+      disabled={disabled || busy}
       activeOpacity={0.8}
     >
-      {loading ? (
-        <ActivityIndicator size="small" color={v.text} />
+      {busy ? (
+        <ActivityIndicator size="small" color={textColor} />
       ) : (
         <>
           {icon && iconPosition === 'left' && (
-            <Ionicons name={icon} size={s.iconSize} color={v.text} style={styles.iconLeft} />
+            <Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={s.iconSize} color={textColor} style={styles.iconLeft} />
           )}
-          <Text style={[styles.label, { fontSize: s.fontSize, color: v.text }, textStyle]}>
-            {label}
+          <Text style={[styles.label, { fontSize: s.fontSize, color: textColor }, textStyle]}>
+            {text}
           </Text>
           {icon && iconPosition === 'right' && (
-            <Ionicons name={icon} size={s.iconSize} color={v.text} style={styles.iconRight} />
+            <Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={s.iconSize} color={textColor} style={styles.iconRight} />
           )}
         </>
       )}

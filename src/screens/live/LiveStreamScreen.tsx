@@ -21,6 +21,7 @@ import Avatar from '../../components/common/Avatar';
 import Badge from '../../components/common/Badge';
 import { sendTip } from '../../api/tips';
 import { getStreamById } from '../../api/rankings';
+import { getLiveComments, postEventComment, EventComment } from '../../api/comments';
 
 const TIP_PRESETS = [2, 5, 10, 20];
 
@@ -35,26 +36,32 @@ const GIFTS = [
   { id: '6', emoji: '🎵', name: 'Note', price: 2 },
 ];
 
-const MOCK_CHAT = [
-  { id: '1', user: 'Alex', message: 'This set is 🔥🔥🔥', time: '22:04', type: 'message' },
-  { id: '2', user: 'Maria', message: 'Best DJ in the game right now!', time: '22:04', type: 'message' },
-  { id: '3', user: 'TechBeat', message: '💎 sent a Diamond Gift!', time: '22:05', type: 'gift', giftName: 'Diamond', giftValue: 50 },
-  { id: '4', user: 'Jordan', message: 'Drop incoming I can feel it', time: '22:05', type: 'message' },
-  { id: '5', user: 'Neon', message: 'ID on that track please??', time: '22:06', type: 'message' },
-  { id: '6', user: 'Sam', message: '🔥 sent a Fire Gift!', time: '22:06', type: 'gift', giftName: 'Fire', giftValue: 1 },
-  { id: '7', user: 'Kai', message: 'TUNNEL 🚀🚀', time: '22:07', type: 'message' },
-  { id: '8', user: 'Alex', message: 'That transition was immaculate', time: '22:07', type: 'message' },
-  { id: '9', user: 'Vibe', message: 'Just started watching — absolute fire', time: '22:08', type: 'message' },
-  { id: '10', user: 'Leo', message: '👑 sent a Crown Gift!', time: '22:08', type: 'gift', giftName: 'Crown', giftValue: 100 },
-];
+type ChatEntry = {
+  id: string;
+  user: string;
+  message: string;
+  time: string;
+  type: 'message' | 'gift';
+  giftName?: string;
+  giftValue?: number;
+};
+
+const formatTime = (iso?: string) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return Number.isFinite(d.getTime()) ? d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '';
+};
+
+const POLL_INTERVAL_MS = 5000;
 
 export default function LiveStreamScreen() {
   const route = useRoute<Route>();
   const navigation = useNavigation();
   const [message, setMessage] = useState('');
-  const [chat, setChat] = useState(MOCK_CHAT);
+  const [chat, setChat] = useState<ChatEntry[]>([]);
   const [showGifts, setShowGifts] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [posting, setPosting] = useState(false);
   const [tipModal, setTipModal] = useState(false);
   const [tipAmount, setTipAmount] = useState('5');
   const [tipMessage, setTipMessage] = useState('');
@@ -67,6 +74,30 @@ export default function LiveStreamScreen() {
       .then((data) => { if (!cancelled) setStream(data); })
       .catch(() => { if (!cancelled) setStream(null); });
     return () => { cancelled = true; };
+  }, [route.params.streamId]);
+
+  // Poll real chat via /comments?liveId=...
+  useEffect(() => {
+    let cancelled = false;
+    const fetchChat = async () => {
+      try {
+        const comments = await getLiveComments(route.params.streamId);
+        if (cancelled) return;
+        const mapped: ChatEntry[] = comments.map((c: EventComment) => ({
+          id: String(c.id),
+          user: c.displayName,
+          message: c.content,
+          time: formatTime(c.createdAt),
+          type: 'message',
+        }));
+        setChat(mapped);
+      } catch {
+        // silent — keep last known chat
+      }
+    };
+    fetchChat();
+    const interval = setInterval(fetchChat, POLL_INTERVAL_MS);
+    return () => { cancelled = true; clearInterval(interval); };
   }, [route.params.streamId]);
 
   const formatDuration = (startedAt?: string) => {
@@ -89,16 +120,29 @@ export default function LiveStreamScreen() {
     duration: formatDuration(stream?.startedAt),
   };
 
-  const sendMessage = () => {
-    if (!message.trim()) return;
+  const sendMessage = async () => {
+    const text = message.trim();
+    if (!text || posting) return;
+    // Optimistic append
+    const optimisticId = `tmp-${Date.now()}`;
     setChat((prev) => [...prev, {
-      id: Date.now().toString(),
+      id: optimisticId,
       user: 'You',
-      message: message.trim(),
+      message: text,
       time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
       type: 'message',
     }]);
     setMessage('');
+    setPosting(true);
+    try {
+      await postEventComment(String(stream?.id ?? route.params.streamId), text);
+      // Real comment will appear on next poll; remove optimistic placeholder so it's not duplicated
+      setChat((prev) => prev.filter((m) => m.id !== optimisticId));
+    } catch {
+      // leave optimistic message visible if post fails — user can retry
+    } finally {
+      setPosting(false);
+    }
   };
 
   const handleTip = async () => {
