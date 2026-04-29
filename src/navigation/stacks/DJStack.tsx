@@ -6,6 +6,7 @@ import DJAnalyticsScreen from '../../screens/dj/DJAnalyticsScreen';
 import DJSetsScreen from '../../screens/dj/DJSetsScreen';
 import DJDealsScreen from '../../screens/dj/DJDealsScreen';
 import DJVideosScreen from '../../screens/dj/DJVideosScreen';
+import DJBroadcastScreen from '../../screens/dj/DJBroadcastScreen';
 
 const Stack = createNativeStackNavigator<DJStackParamList>();
 
@@ -17,6 +18,7 @@ export default function DJStack() {
       <Stack.Screen name="DJSets" component={DJSetsScreen} />
       <Stack.Screen name="DJDeals" component={DJDealsScreen} />
       <Stack.Screen name="DJVideos" component={DJVideosScreen} />
+      <Stack.Screen name="DJBroadcast" component={DJBroadcastScreen} />
     </Stack.Navigator>
   );
 }

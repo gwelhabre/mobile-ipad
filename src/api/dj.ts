@@ -61,3 +61,24 @@ export const createDJSet = async (payload: {
   const { data } = await client.post('/djs/me/sets', payload);
   return data;
 };
+
+export interface DJDashboardEvent {
+  id: string;
+  title: string;
+  startTime: string;
+  status: string;
+  venue: { id: string; name: string; city?: string };
+  liveStream?: { id: string; status: string; streamKey: string | null } | null;
+}
+
+export const getDJDashboardEvents = async (status?: string): Promise<DJDashboardEvent[]> => {
+  const { data } = await client.get<{ events: DJDashboardEvent[] }>('/dj/dashboard/events', {
+    params: status ? { status } : undefined,
+  });
+  return data.events ?? [];
+};
+
+export const djStreamAction = async (action: 'start' | 'stop', eventId: string) => {
+  const { data } = await client.post('/live', { action, eventId });
+  return data;
+};

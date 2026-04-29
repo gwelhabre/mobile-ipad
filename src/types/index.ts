@@ -645,6 +645,7 @@ export type DJStackParamList = {
   DJSets: undefined;
   DJDeals: undefined;
   DJVideos: undefined;
+  DJBroadcast: undefined;
 };
 
 export type VenueStackParamList = {
