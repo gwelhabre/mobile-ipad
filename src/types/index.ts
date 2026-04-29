@@ -669,4 +669,5 @@ export type ProfileStackParamList = {
   DeleteAccount: undefined;
   BlockedUsers: undefined;
   EventPlannerDashboard: undefined;
+  Info: { topic: string };
 };
