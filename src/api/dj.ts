@@ -48,3 +48,16 @@ export const djApi = {
   respondToDeal: (dealId: string, action: 'accept' | 'reject') =>
     client.post<ApiResponse<DJDeal>>(`/djs/me/deals/${dealId}/${action}`),
 };
+
+export const createDJSet = async (payload: {
+  title: string;
+  description?: string;
+  coverImage?: string;
+  previewUrl?: string;
+  price?: number;
+  accessType?: 'free' | 'paid' | 'subscription';
+  visibility?: 'public' | 'unlisted' | 'private';
+}) => {
+  const { data } = await client.post('/djs/me/sets', payload);
+  return data;
+};

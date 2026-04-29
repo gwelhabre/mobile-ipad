@@ -46,3 +46,19 @@ export const getMyListings = async (): Promise<any[]> => {
   const { data } = await client.get<{ products: any[] }>('/marketplace/products/mine');
   return data?.products ?? [];
 };
+
+export const createMarketplaceProduct = async (payload: {
+  title: string;
+  price: number;
+  description?: string;
+  currency?: string;
+  category?: string;
+  productType?: 'digital' | 'physical' | 'service';
+  coverImage?: string;
+  tags?: string[];
+  status?: 'draft' | 'active' | 'archived';
+  inventory?: number;
+}) => {
+  const { data } = await client.post<{ product: any }>('/marketplace/products', payload);
+  return data.product;
+};
