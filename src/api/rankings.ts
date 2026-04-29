@@ -308,6 +308,22 @@ export const getVenueDetail = async (id: string | number): Promise<Venue> => {
   return data;
 };
 
+export const getVenueDeals = async () => {
+  const { data } = await client.get<{ deals: any[] }>('/venue/deals');
+  return data.deals ?? [];
+};
+
+export const createVenueDeal = async (payload: {
+  djId: string;
+  venueId: string;
+  proposedFee?: number;
+  eventDate?: string;
+  notes?: string;
+}) => {
+  const { data } = await client.post<{ deal: any }>('/venue/deals', payload);
+  return data.deal;
+};
+
 export const getLiveStreams = async (): Promise<any[]> => {
   const { data } = await client.get<any[]>('/streams/live');
   return Array.isArray(data) ? data : [];
