@@ -3,6 +3,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MarketplaceStackParamList } from '../../types';
 import MarketplaceScreen from '../../screens/marketplace/MarketplaceScreen';
 import ProductDetailScreen from '../../screens/marketplace/ProductDetailScreen';
+import OrdersScreen from '../../screens/marketplace/OrdersScreen';
+import MyListingsScreen from '../../screens/marketplace/MyListingsScreen';
 
 const Stack = createNativeStackNavigator<MarketplaceStackParamList>();
 
@@ -11,6 +13,8 @@ export default function MarketplaceStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Marketplace" component={MarketplaceScreen} />
       <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
+      <Stack.Screen name="Orders" component={OrdersScreen} />
+      <Stack.Screen name="MyListings" component={MyListingsScreen} />
     </Stack.Navigator>
   );
 }

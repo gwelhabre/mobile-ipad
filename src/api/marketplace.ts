@@ -36,3 +36,13 @@ export const marketplaceApi = {
   updateProduct: (productId: string, payload: Partial<Product>) =>
     client.put<ApiResponse<Product>>(`/marketplace/products/${productId}`, payload),
 };
+
+export const getMyOrders = async (): Promise<any[]> => {
+  const { data } = await client.get<any>('/marketplace/orders');
+  return Array.isArray(data) ? data : (data?.orders ?? []);
+};
+
+export const getMyListings = async (): Promise<any[]> => {
+  const { data } = await client.get<{ products: any[] }>('/marketplace/products/mine');
+  return data?.products ?? [];
+};

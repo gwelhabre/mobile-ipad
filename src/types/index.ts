@@ -630,6 +630,8 @@ export type WalletStackParamList = {
 export type MarketplaceStackParamList = {
   Marketplace: undefined;
   ProductDetail: { productId: string };
+  Orders: undefined;
+  MyListings: undefined;
 };
 
 export type CommunityStackParamList = {
@@ -642,6 +644,7 @@ export type DJStackParamList = {
   DJAnalytics: undefined;
   DJSets: undefined;
   DJDeals: undefined;
+  DJVideos: undefined;
 };
 
 export type VenueStackParamList = {
