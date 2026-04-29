@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ import { LiveStackParamList } from '../../types';
 import Avatar from '../../components/common/Avatar';
 import Badge from '../../components/common/Badge';
 import { sendTip } from '../../api/tips';
+import { getStreamById } from '../../api/rankings';
 
 const TIP_PRESETS = [2, 5, 10, 20];
 
@@ -58,16 +59,34 @@ export default function LiveStreamScreen() {
   const [tipAmount, setTipAmount] = useState('5');
   const [tipMessage, setTipMessage] = useState('');
   const [tipLoading, setTipLoading] = useState(false);
+  const [stream, setStream] = useState<any | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getStreamById(route.params.streamId)
+      .then((data) => { if (!cancelled) setStream(data); })
+      .catch(() => { if (!cancelled) setStream(null); });
+    return () => { cancelled = true; };
+  }, [route.params.streamId]);
+
+  const formatDuration = (startedAt?: string) => {
+    if (!startedAt) return '0:00';
+    const seconds = Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000));
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}` : `${m}:${String(s).padStart(2, '0')}`;
+  };
 
   const streamInfo = {
-    id: route.params.streamId,
-    djId: route.params.djId,
-    djName: route.params.djName ?? 'DJ Pulse',
-    title: 'Tech House Massive — Live from London',
-    genre: 'Tech House',
-    viewerCount: 2840,
-    giftsTotal: 1240,
-    duration: '1:42:18',
+    id: stream?.id ?? route.params.streamId,
+    djId: stream?.djId ?? route.params.djId,
+    djName: stream?.djName ?? route.params.djName ?? 'DJ',
+    title: stream?.title ?? 'Live Set',
+    genre: stream?.genre ?? 'Live',
+    viewerCount: stream?.viewerCount ?? 0,
+    giftsTotal: stream?.totalGiftsValue ?? 0,
+    duration: formatDuration(stream?.startedAt),
   };
 
   const sendMessage = () => {

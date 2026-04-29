@@ -307,3 +307,13 @@ export const getVenueDetail = async (id: string | number): Promise<Venue> => {
   const { data } = await client.get<Venue>(`/venues/${id}`);
   return data;
 };
+
+export const getLiveStreams = async (): Promise<any[]> => {
+  const { data } = await client.get<any[]>('/streams/live');
+  return Array.isArray(data) ? data : [];
+};
+
+export const getStreamById = async (streamId: string): Promise<any> => {
+  const { data } = await client.get<any>(`/streams/${streamId}`);
+  return data;
+};

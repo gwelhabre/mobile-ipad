@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   FlatList,
   TouchableOpacity,
   ScrollView,
+  RefreshControl,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -14,35 +15,69 @@ import { LiveStackParamList } from '../../types';
 import PageHeader from '../../components/layout/PageHeader';
 import Avatar from '../../components/common/Avatar';
 import Badge from '../../components/common/Badge';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
+import { getLiveStreams } from '../../api/rankings';
+
+type DirectoryStream = {
+  id: string;
+  djId: string;
+  djName: string;
+  djAvatarUrl?: string;
+  title: string;
+  genre: string;
+  viewerCount: number;
+  isHD: boolean;
+  tags: string[];
+};
 
 type Nav = NativeStackNavigationProp<LiveStackParamList, 'LiveDirectory'>;
-
-const MOCK_STREAMS = Array.from({ length: 16 }, (_, i) => ({
-  id: `stream-${i}`,
-  djName: ['DJ Pulse', 'Nova Sound', 'Electra', 'Bass Theory', 'Phantom Wave', 'Sonic Drive', 'Aurora Beats', 'Neon Flux', 'Crystal Method', 'Dark Matter', 'Echo Storm', 'Voltage', 'Prism', 'Nebula', 'Orbit', 'Cascade'][i],
-  title: ['Tech House Massive', 'Deep Night Vibes', 'Trance Journey', 'Bass & Breaks', 'Midnight Techno', 'Sunset Session', 'Morning Groove', 'Underground Special', 'Peak Time Set', 'Dark Hours', 'Friday Rush', 'Weekend Warmup', 'Late Night Drive', 'Dawn Mix', 'Club Essentials', 'Warehouse Set'][i],
-  genre: ['Tech House', 'Deep House', 'Trance', 'Drum & Bass', 'Techno', 'Melodic', 'Afro House', 'Minimal', 'Peak Time', 'Dark Techno', 'Tech House', 'Progressive', 'Techno', 'Ambient', 'House', 'Techno'][i],
-  viewerCount: [2840, 1392, 4103, 845, 1789, 2580, 1240, 680, 3200, 560, 1100, 2200, 940, 430, 1850, 720][i],
-  isHD: i % 3 !== 2,
-  tags: [['house', 'groove'], ['deep', 'night'], ['trance', 'uplifting']][i % 3],
-}));
 
 const GENRES = ['All', 'Tech House', 'Techno', 'Trance', 'D&B', 'Melodic', 'Deep House'];
 
 export default function LiveDirectoryScreen() {
   const navigation = useNavigation<Nav>();
   const [selectedGenre, setSelectedGenre] = useState('All');
+  const [streams, setStreams] = useState<DirectoryStream[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const totalViewers = MOCK_STREAMS.reduce((sum, s) => sum + s.viewerCount, 0);
+  const loadStreams = useCallback(async () => {
+    try {
+      const raw = await getLiveStreams();
+      const mapped: DirectoryStream[] = raw.map((s: any, i: number) => ({
+        id: String(s.id),
+        djId: String(s.djId ?? s.dj?.id ?? ''),
+        djName: s.djName ?? s.dj?.stageName ?? 'DJ',
+        djAvatarUrl: s.djAvatarUrl ?? s.dj?.profileImage,
+        title: s.title ?? 'Live Set',
+        genre: s.genre ?? s.event?.genre ?? 'Live',
+        viewerCount: s.viewerCount ?? 0,
+        isHD: i % 3 !== 2,
+        tags: Array.isArray(s.tags) ? s.tags : [],
+      }));
+      setStreams(mapped);
+    } catch {
+      setStreams([]);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
 
-  const filtered = MOCK_STREAMS.filter(
+  useEffect(() => { loadStreams(); }, [loadStreams]);
+
+  const totalViewers = streams.reduce((sum, s) => sum + s.viewerCount, 0);
+
+  const filtered = streams.filter(
     (s) => selectedGenre === 'All' || s.genre.toLowerCase().includes(selectedGenre.toLowerCase()),
   );
 
-  const renderStreamCard = ({ item }: { item: typeof MOCK_STREAMS[0] }) => (
+  if (loading) return <LoadingSpinner fullScreen />;
+
+  const renderStreamCard = ({ item }: { item: DirectoryStream }) => (
     <TouchableOpacity
       style={styles.streamCard}
-      onPress={() => navigation.navigate('LiveStream', { streamId: item.id, djName: item.djName })}
+      onPress={() => navigation.navigate('LiveStream', { streamId: item.id, djName: item.djName, djId: item.djId })}
       activeOpacity={0.8}
     >
       {/* Thumbnail */}
@@ -125,6 +160,9 @@ export default function LiveDirectoryScreen() {
         numColumns={4}
         contentContainerStyle={styles.grid}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadStreams(); }} tintColor="#7c3aed" />
+        }
       />
     </View>
   );
