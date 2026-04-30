@@ -466,12 +466,16 @@ export interface CompetitionEntry {
 
 export interface Notification {
   id: string;
-  userId: string;
-  type: 'follow' | 'gift' | 'deal' | 'competition' | 'booking' | 'system' | 'live_started' | 'payout';
+  userId?: string;
+  type: 'follow' | 'gift' | 'deal' | 'competition' | 'booking' | 'system' | 'live_started' | 'payout' | 'wallet' | 'like' | 'event' | 'comment' | 'live' | 'ranking';
   title: string;
-  body: string;
+  /** Backend may send `body` or `message`. */
+  body?: string;
+  message?: string;
   data?: Record<string, string>;
-  isRead: boolean;
+  /** Use either `read` or `isRead`. */
+  read?: boolean;
+  isRead?: boolean;
   createdAt: string;
   actorName?: string;
   actorAvatarUrl?: string;
