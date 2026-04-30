@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -25,8 +25,14 @@ export default function ChangePasswordScreen() {
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (navTimerRef.current) clearTimeout(navTimerRef.current);
+  }, []);
 
   const handleSave = async () => {
+    if (saving) return; // re-entrancy guard
     setErrorMsg('');
     setSuccessMsg('');
     if (!currentPassword || !newPassword || !confirmPassword) {
@@ -46,7 +52,7 @@ export default function ChangePasswordScreen() {
     try {
       await changePassword(currentPassword, newPassword);
       setSuccessMsg('Password changed successfully');
-      setTimeout(() => navigation.goBack(), 1200);
+      navTimerRef.current = setTimeout(() => navigation.goBack(), 1200);
     } catch (err: any) {
       const msg = err?.response?.data?.error ?? 'Failed to change password';
       setErrorMsg(msg);
