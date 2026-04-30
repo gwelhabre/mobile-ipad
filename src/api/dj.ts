@@ -58,7 +58,17 @@ export const createDJSet = async (payload: {
   accessType?: 'free' | 'paid' | 'subscription';
   visibility?: 'public' | 'unlisted' | 'private';
 }) => {
-  const { data } = await client.post('/djs/me/sets', payload);
+  const mappedAccessType = payload.accessType === 'paid' ? 'purchase'
+    : payload.accessType === 'subscription' ? 'stream'
+    : 'purchase';
+  const mappedVisibility = payload.visibility === 'private' || payload.visibility === 'unlisted'
+    ? 'members_only'
+    : 'public';
+  const { data } = await client.post('/djs/me/sets', {
+    ...payload,
+    accessType: mappedAccessType,
+    visibility: mappedVisibility,
+  });
   return data;
 };
 
@@ -81,4 +91,10 @@ export const getDJDashboardEvents = async (status?: string): Promise<DJDashboard
 export const djStreamAction = async (action: 'start' | 'stop', eventId: string) => {
   const { data } = await client.post('/live', { action, eventId });
   return data;
+};
+
+/** Cross-platform helper — DJ display name regardless of which schema field the platform uses. */
+export const getDjDisplayName = (dj: any): string => {
+  if (!dj) return 'DJ';
+  return dj.stageName ?? dj.displayName ?? dj.username ?? 'DJ';
 };

@@ -27,20 +27,27 @@ type QuickAction = {
   icon: string;
   label: string;
   screen: string;
+  nestedScreen?: string;
+  nestedParams?: Record<string, unknown>;
   color: string;
   roles?: string[];
 };
 
 const QUICK_ACTIONS: QuickAction[] = [
-  { icon: 'analytics-outline', label: 'DJ Dashboard', screen: 'DJStack', color: '#a855f7', roles: ['dj'] },
-  { icon: 'trending-up-outline', label: 'Analytics', screen: 'DJStack', color: '#3b82f6', roles: ['dj'] },
-  { icon: 'disc-outline', label: 'My Sets', screen: 'DJStack', color: '#10b981', roles: ['dj'] },
-  { icon: 'briefcase-outline', label: 'Deals', screen: 'DJStack', color: '#f59e0b', roles: ['dj', 'venue_manager'] },
-  { icon: 'business-outline', label: 'Venue Dashboard', screen: 'VenueStack', color: '#10b981', roles: ['venue_manager'] },
-  { icon: 'shield-outline', label: 'Admin Panel', screen: 'AdminStack', color: '#ef4444', roles: ['admin'] },
+  { icon: 'analytics-outline', label: 'DJ Dashboard', screen: 'DJStack', nestedScreen: 'DJDashboard', color: '#a855f7', roles: ['dj'] },
+  { icon: 'videocam-outline', label: 'Videos', screen: 'DJStack', nestedScreen: 'DJVideos', color: '#a855f7', roles: ['dj'] },
+  { icon: 'radio-outline', label: 'Go Live', screen: 'DJStack', nestedScreen: 'DJBroadcast', color: '#ef4444', roles: ['dj'] },
+  { icon: 'trending-up-outline', label: 'Analytics', screen: 'DJStack', nestedScreen: 'DJAnalytics', color: '#3b82f6', roles: ['dj'] },
+  { icon: 'disc-outline', label: 'My Sets', screen: 'DJStack', nestedScreen: 'DJSets', color: '#10b981', roles: ['dj'] },
+  { icon: 'briefcase-outline', label: 'Deals', screen: 'DJStack', nestedScreen: 'DJDeals', color: '#f59e0b', roles: ['dj', 'venue_manager'] },
+  { icon: 'business-outline', label: 'Venue Dashboard', screen: 'VenueStack', nestedScreen: 'VenueDashboard', color: '#10b981', roles: ['venue_manager'] },
+  { icon: 'shield-outline', label: 'Admin', screen: 'ProfileStack', nestedScreen: 'Admin', color: '#ef4444', roles: ['admin'] },
   { icon: 'card-outline', label: 'Wallet', screen: 'WalletStack', color: '#f59e0b', roles: ['dj', 'venue_manager', 'fan', 'seller'] },
-  { icon: 'storefront-outline', label: 'Marketplace', screen: 'MarketplaceStack', color: '#06b6d4', roles: ['seller'] },
+  { icon: 'bag-handle-outline', label: 'My Orders', screen: 'MarketplaceStack', nestedScreen: 'Orders', color: '#a78bfa', roles: ['fan', 'dj', 'venue_manager', 'seller'] },
+  { icon: 'storefront-outline', label: 'My Listings', screen: 'MarketplaceStack', nestedScreen: 'MyListings', color: '#06b6d4', roles: ['seller', 'dj'] },
   { icon: 'sparkles-outline', label: 'Event Planner', screen: 'EventPlannerDashboard', color: '#06b6d4', roles: ['event_planner'] },
+  { icon: 'information-circle-outline', label: 'About', screen: 'ProfileStack', nestedScreen: 'Info', nestedParams: { topic: 'about' }, color: '#94a3b8' },
+  { icon: 'help-circle-outline', label: 'Help', screen: 'ProfileStack', nestedScreen: 'Info', nestedParams: { topic: 'help' }, color: '#94a3b8' },
 ];
 
 export default function ProfileScreen() {
@@ -108,7 +115,13 @@ export default function ProfileScreen() {
                 <TouchableOpacity
                   key={action.label}
                   style={[styles.actionBtn, { borderColor: `${action.color}30` }]}
-                  onPress={() => navigation.navigate(action.screen)}
+                  onPress={() => {
+                    if (action.nestedScreen) {
+                      navigation.navigate(action.screen, { screen: action.nestedScreen, params: action.nestedParams });
+                    } else {
+                      navigation.navigate(action.screen);
+                    }
+                  }}
                 >
                   <View style={[styles.actionIcon, { backgroundColor: `${action.color}20` }]}>
                     <Ionicons name={action.icon as any} size={24} color={action.color} />

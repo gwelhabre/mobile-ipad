@@ -5,7 +5,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { venueDealApi } from '../../api/events';
 import { createVenueDeal, getMyVenues } from '../../api/rankings';
-import { getDJs } from '../../api/dj';
+import { getDJs, getDjDisplayName } from '../../api/dj';
 import { DJProfile } from '../../types';
 import PageHeader from '../../components/layout/PageHeader';
 import Card from '../../components/common/Card';
@@ -89,7 +89,7 @@ export default function VenueDealsScreen() {
       });
       setSelectedDj(null); setDjSearch(''); setDjs([]); setProposedFee(''); setEventDate(''); setNotes('');
       setModalVisible(false);
-      Alert.alert('Proposal sent', `${selectedDj.displayName ?? 'DJ'} has been notified.`);
+      Alert.alert('Proposal sent', `${getDjDisplayName(selectedDj)} has been notified.`);
     } catch (err: any) {
       Alert.alert('Could not propose deal', err?.response?.data?.error ?? 'Please try again.');
     } finally {
@@ -242,8 +242,8 @@ export default function VenueDealsScreen() {
               <Text style={styles.modalLabel}>DJ</Text>
               {selectedDj ? (
                 <View style={styles.selectedDj}>
-                  <Avatar uri={selectedDj.avatarUrl} name={selectedDj.displayName ?? 'DJ'} size={36} />
-                  <Text style={styles.selectedDjName}>{selectedDj.displayName}</Text>
+                  <Avatar uri={selectedDj.avatarUrl} name={getDjDisplayName(selectedDj)} size={36} />
+                  <Text style={styles.selectedDjName}>{getDjDisplayName(selectedDj)}</Text>
                   <TouchableOpacity onPress={() => setSelectedDj(null)}>
                     <Ionicons name="close-circle" size={20} color="#6b7280" />
                   </TouchableOpacity>
@@ -259,8 +259,8 @@ export default function VenueDealsScreen() {
                   />
                   {djs.map((dj) => (
                     <TouchableOpacity key={String(dj.id)} style={styles.djRow} onPress={() => { setSelectedDj(dj); setDjs([]); setDjSearch(''); }}>
-                      <Avatar uri={dj.avatarUrl} name={dj.displayName ?? 'DJ'} size={32} />
-                      <Text style={styles.djRowName}>{dj.displayName}</Text>
+                      <Avatar uri={dj.avatarUrl} name={getDjDisplayName(dj)} size={32} />
+                      <Text style={styles.djRowName}>{getDjDisplayName(dj)}</Text>
                     </TouchableOpacity>
                   ))}
                 </>

@@ -135,8 +135,10 @@ export default function LiveStreamScreen() {
     setMessage('');
     setPosting(true);
     try {
-      await postEventComment(String(stream?.id ?? route.params.streamId), text);
-      // Real comment will appear on next poll; remove optimistic placeholder so it's not duplicated
+      // Comments are keyed by eventId on the backend, not streamId.
+      // Fall back to streamId only if the stream record isn't loaded yet (best effort).
+      const eventKey = String((stream as any)?.eventId ?? stream?.event?.id ?? route.params.streamId);
+      await postEventComment(eventKey, text);
       setChat((prev) => prev.filter((m) => m.id !== optimisticId));
     } catch {
       // leave optimistic message visible if post fails — user can retry
@@ -152,7 +154,7 @@ export default function LiveStreamScreen() {
       return;
     }
     if (amount > 20) {
-      Alert.alert('Tip limit', 'Private tips are capped at 20 EUR per DJ per stream/event.');
+      Alert.alert('Tip limit', 'Private tips are capped at $20 per DJ per stream/event.');
       return;
     }
     if (!streamInfo.djId) {
@@ -367,7 +369,7 @@ export default function LiveStreamScreen() {
                 <Ionicons name="close" size={20} color="#fff" />
               </TouchableOpacity>
             </View>
-            <Text style={styles.tipSubtitle}>Private tip — capped at 20 EUR per DJ per stream/event.</Text>
+            <Text style={styles.tipSubtitle}>Private tip — capped at $20 per DJ per stream/event.</Text>
             <View style={styles.tipPresets}>
               {TIP_PRESETS.map((p) => {
                 const active = String(p) === tipAmount;
