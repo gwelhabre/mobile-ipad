@@ -39,6 +39,7 @@ export default function DJSetsScreen() {
   const [saving, setSaving] = useState(false);
 
   const submitSet = async () => {
+    if (saving) return; // re-entrancy guard
     if (!title.trim()) {
       Alert.alert('Missing title', 'Set title is required.');
       return;

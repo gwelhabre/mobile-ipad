@@ -70,6 +70,7 @@ export default function VenueDealsScreen() {
   };
 
   const submitDeal = async () => {
+    if (saving) return; // re-entrancy guard
     if (!selectedDj) {
       Alert.alert('Pick a DJ', 'Search and select a DJ to propose to.');
       return;
