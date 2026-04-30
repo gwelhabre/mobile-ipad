@@ -69,10 +69,15 @@ export default function NotificationsScreen() {
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
+  const handleNotifPress = (item: Notification) => {
+    // Mark-as-read could be wired here when the API is available; for now, no-op nav.
+    if (!item.read) setNotifications((prev) => prev.map((n) => n.id === item.id ? { ...n, read: true } : n));
+  };
+
   const renderItem = ({ item }: { item: Notification }) => {
     const typeInfo = TYPE_ICONS[item.type] ?? TYPE_ICONS.system;
     return (
-      <TouchableOpacity onPress={() => {}} activeOpacity={0.7}>
+      <TouchableOpacity onPress={() => handleNotifPress(item)} activeOpacity={0.7}>
         <Card style={[styles.notifCard, !item.read && styles.unreadCard]}>
           {!item.read && <View style={styles.unreadDot} />}
           <View style={[styles.iconWrap, { backgroundColor: `${typeInfo.color}15` }]}>

@@ -136,7 +136,7 @@ export default function DJProfileScreen() {
               {dj.isLive && (
                 <Button
                   label="Watch Live"
-                  onPress={() => {}}
+                  onPress={() => Alert.alert('Live now', 'Open the Live tab to watch this DJ stream.')}
                   variant="secondary"
                   icon="radio"
                   style={styles.actionBtn}
@@ -144,7 +144,7 @@ export default function DJProfileScreen() {
               )}
               <Button
                 label="Send Gift"
-                onPress={() => {}}
+                onPress={() => Alert.alert('Send a gift', 'Open the DJ’s active live stream to send a gift or tip.')}
                 variant="ghost"
                 icon="gift"
                 style={styles.actionBtn}
@@ -152,7 +152,7 @@ export default function DJProfileScreen() {
               {dj.isBookableForPrivateEvents && (
                 <Button
                   label="Book for Private Event"
-                  onPress={() => {}}
+                  onPress={() => Alert.alert('Book this DJ', 'To send a booking proposal, switch to the Venue Manager dashboard and use the "Propose Deal" action.')}
                   variant="outline"
                   icon="calendar"
                   style={styles.actionBtn}
