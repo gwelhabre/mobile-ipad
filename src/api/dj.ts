@@ -98,3 +98,15 @@ export const getDjDisplayName = (dj: any): string => {
   if (!dj) return 'DJ';
   return dj.stageName ?? dj.displayName ?? dj.username ?? 'DJ';
 };
+
+/** Cross-platform top-level helper that takes a single search string (matches android/iOS signature). */
+export const getDJs = async (search?: string): Promise<DJProfile[]> => {
+  const { data } = await client.get<any>('/djs', {
+    params: { page: 1, limit: 20, search },
+  });
+  // Normalize: backend may return ApiResponse<PaginatedResponse<DJProfile>> or a flat array.
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.data?.data)) return data.data.data;
+  return [];
+};
