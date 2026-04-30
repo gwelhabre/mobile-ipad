@@ -50,15 +50,27 @@ export default function ProductDetailScreen() {
 
   const handlePurchase = async () => {
     if (isPurchased || purchasing) return;
-    setPurchasing(true);
-    try {
-      await marketplaceApi.purchaseProduct(product.id);
-      setIsPurchased(true);
-    } catch (err: any) {
-      Alert.alert('Purchase failed', err?.response?.data?.error || err?.response?.data?.message || 'Could not complete purchase.');
-    } finally {
-      setPurchasing(false);
-    }
+    Alert.alert(
+      'Confirm Purchase',
+      `Buy "${product.title}" for $${product.price.toFixed(2)}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Buy Now',
+          onPress: async () => {
+            setPurchasing(true);
+            try {
+              await marketplaceApi.purchaseProduct(product.id);
+              setIsPurchased(true);
+            } catch (err: any) {
+              Alert.alert('Purchase failed', err?.response?.data?.error || err?.response?.data?.message || 'Could not complete purchase.');
+            } finally {
+              setPurchasing(false);
+            }
+          },
+        },
+      ],
+    );
   };
 
   return (
