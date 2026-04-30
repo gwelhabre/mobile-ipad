@@ -19,7 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { LiveStackParamList } from '../../types';
 import Avatar from '../../components/common/Avatar';
 import Badge from '../../components/common/Badge';
-import { sendTip } from '../../api/tips';
+import { sendTip, SUPPORTED_TIP_CURRENCIES, TIP_CURRENCY_SYMBOLS, TipCurrency } from '../../api/tips';
 import { getStreamById } from '../../api/rankings';
 import { getLiveComments, postEventComment, EventComment } from '../../api/comments';
 
@@ -64,6 +64,7 @@ export default function LiveStreamScreen() {
   const [posting, setPosting] = useState(false);
   const [tipModal, setTipModal] = useState(false);
   const [tipAmount, setTipAmount] = useState('5');
+  const [tipCurrency, setTipCurrency] = useState<TipCurrency>('USD');
   const [tipMessage, setTipMessage] = useState('');
   const [tipLoading, setTipLoading] = useState(false);
   const [stream, setStream] = useState<any | null>(null);
@@ -148,13 +149,15 @@ export default function LiveStreamScreen() {
   };
 
   const handleTip = async () => {
+    if (tipLoading) return; // re-entrancy guard
     const amount = Number(tipAmount.replace(',', '.'));
     if (!Number.isFinite(amount) || amount <= 0) {
       Alert.alert('Invalid amount', 'Enter a tip amount greater than 0.');
       return;
     }
     if (amount > 20) {
-      Alert.alert('Tip limit', 'Private tips are capped at $20 per DJ per stream/event.');
+      const sym = TIP_CURRENCY_SYMBOLS[tipCurrency] ?? tipCurrency;
+      Alert.alert('Tip limit', `Private tips are capped at ${sym}20 (${tipCurrency}) per DJ per stream/event.`);
       return;
     }
     if (!streamInfo.djId) {
@@ -167,6 +170,7 @@ export default function LiveStreamScreen() {
         djId: streamInfo.djId,
         amount,
         liveId: streamInfo.id,
+        currency: tipCurrency,
         message: tipMessage.trim() || undefined,
       });
       setTipModal(false);
@@ -369,7 +373,22 @@ export default function LiveStreamScreen() {
                 <Ionicons name="close" size={20} color="#fff" />
               </TouchableOpacity>
             </View>
-            <Text style={styles.tipSubtitle}>Private tip — capped at $20 per DJ per stream/event.</Text>
+            <Text style={styles.tipSubtitle}>Private tip — capped at 20 {tipCurrency} per DJ per stream/event.</Text>
+            <Text style={styles.currencyLabel}>Currency</Text>
+            <View style={styles.currencyRow}>
+              {SUPPORTED_TIP_CURRENCIES.map((c) => (
+                <TouchableOpacity
+                  key={c}
+                  style={[styles.currencyChip, tipCurrency === c && styles.currencyChipActive]}
+                  onPress={() => setTipCurrency(c)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.currencyChipText, tipCurrency === c && styles.currencyChipTextActive]}>
+                    {TIP_CURRENCY_SYMBOLS[c]} {c}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
             <View style={styles.tipPresets}>
               {TIP_PRESETS.map((p) => {
                 const active = String(p) === tipAmount;
@@ -380,7 +399,7 @@ export default function LiveStreamScreen() {
                     onPress={() => setTipAmount(String(p))}
                     activeOpacity={0.8}
                   >
-                    <Text style={[styles.tipPresetText, active && styles.tipPresetTextActive]}>{p}€</Text>
+                    <Text style={[styles.tipPresetText, active && styles.tipPresetTextActive]}>{TIP_CURRENCY_SYMBOLS[tipCurrency]}{p}</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -390,7 +409,7 @@ export default function LiveStreamScreen() {
               value={tipAmount}
               onChangeText={setTipAmount}
               keyboardType="decimal-pad"
-              placeholder="Amount"
+              placeholder={`Amount in ${tipCurrency}`}
               placeholderTextColor="#4b5563"
             />
             <TextInput
@@ -669,6 +688,12 @@ const styles = StyleSheet.create({
   tipPresetActive: { borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.12)' },
   tipPresetText: { color: '#94a3b8', fontSize: 15, fontWeight: '700' },
   tipPresetTextActive: { color: '#10b981' },
+  currencyLabel: { color: '#94a3b8', fontSize: 11, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 4 },
+  currencyRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  currencyChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: '#1e1e2e', backgroundColor: '#13131a' },
+  currencyChipActive: { borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.12)' },
+  currencyChipText: { color: '#94a3b8', fontSize: 12, fontWeight: '700' },
+  currencyChipTextActive: { color: '#10b981' },
   tipInput: { backgroundColor: '#0a0a0f', borderWidth: 1, borderColor: '#1e1e2e', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, color: '#fff', fontSize: 14 },
   tipSendBtn: { backgroundColor: '#10b981', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 6 },
   tipSendBtnDisabled: { opacity: 0.6 },
