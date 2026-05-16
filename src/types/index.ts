@@ -317,14 +317,36 @@ export interface Transaction {
 
 export interface PayoutRequest {
   id: string;
-  userId: string;
+  userId?: string;
   amount: number;
-  currency: string;
-  method: 'bank_transfer' | 'paypal' | 'stripe';
-  accountDetails: string;
-  status: 'pending' | 'processing' | 'completed' | 'rejected';
+  currency?: string;
+  method: string;
+  accountDetails?: string;
+  notes?: string;
+  status: 'pending' | 'processing' | 'completed' | 'rejected' | 'paid' | 'approved';
   createdAt: string;
+  requestedAt?: string;
   processedAt?: string;
+}
+
+export interface RidesPackage {
+  id: string;
+  ridesAmount: number;
+  priceUsd: number;
+  platform: string;
+  isActive: boolean;
+}
+
+export interface WhishStatus {
+  whishPhone: string | null;
+  whishPhoneVerifiedAt: string | null;
+  whishDisplayName: string | null;
+}
+
+export interface WhishVerificationStart {
+  verificationId: string;
+  displayName?: string | null;
+  expiresAt: string;
 }
 
 // ─── Marketplace ─────────────────────────────────────────────────────────────
@@ -629,6 +651,7 @@ export type WalletStackParamList = {
   Wallet: undefined;
   AddFunds: undefined;
   Payout: undefined;
+  WhishSetup: undefined;
 };
 
 export type MarketplaceStackParamList = {

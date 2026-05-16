@@ -1,31 +1,52 @@
 import client from './client';
-import { ApiResponse, PaginatedResponse, Transaction, WalletBalance, PayoutRequest } from '../types';
+import type {
+  ApiResponse,
+  PaginatedResponse,
+  Transaction,
+  PayoutRequest,
+  RidesPackage,
+  WhishStatus,
+  WhishVerificationStart,
+} from '../types';
+
+export interface WalletResponse {
+  wallet: {
+    id: string;
+    userId: string;
+    availableBalance: number;
+    pendingBalance: number;
+    coinBalance: number;
+    coinPending: number;
+    currency: string;
+    totalEarned: number;
+  };
+  whish: WhishStatus | null;
+}
 
 export const walletApi = {
-  getBalance: () =>
-    client.get<ApiResponse<WalletBalance>>('/wallet/balance'),
+  getWallet: () =>
+    client.get<WalletResponse>('/wallet'),
 
   getTransactions: (page = 1, limit = 20) =>
     client.get<ApiResponse<PaginatedResponse<Transaction>>>('/wallet/transactions', {
       params: { page, limit },
     }),
 
-  addFunds: (amount: number, paymentMethod: string, paymentToken: string) =>
-    client.post<ApiResponse<Transaction>>('/wallet/add-funds', {
-      amount,
-      paymentMethod,
-      paymentToken,
-    }),
+  getPackages: () =>
+    client.get<{ packages: RidesPackage[] }>('/wallet/packages'),
 
-  requestPayout: (amount: number, method: string, accountDetails: string) =>
-    client.post<ApiResponse<PayoutRequest>>('/wallet/payout', {
-      amount,
-      method,
-      accountDetails,
-    }),
+  createCheckout: (packageId: string) =>
+    client.post<{ url: string; sessionId: string }>('/wallet/checkout', { packageId }),
 
-  getPayoutHistory: (page = 1, limit = 20) =>
-    client.get<ApiResponse<PaginatedResponse<PayoutRequest>>>('/wallet/payouts', {
-      params: { page, limit },
-    }),
+  requestPayout: (amount: number, notes?: string) =>
+    client.post<{ payoutRequest: PayoutRequest }>('/wallet/payout', { amount, notes }),
+
+  getPayoutHistory: () =>
+    client.get<{ requests: PayoutRequest[] }>('/wallet/payout'),
+
+  setupWhish: (phone: string) =>
+    client.post<WhishVerificationStart>('/wallet/whish/setup', { phone }),
+
+  verifyWhish: (verificationId: string, code: string) =>
+    client.post<{ user: WhishStatus }>('/wallet/whish/verify', { verificationId, code }),
 };
