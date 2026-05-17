@@ -17,7 +17,7 @@ import { DiscoverStackParamList, Event, TableReservation } from '../../types';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 import { eventsApi } from '../../api/events';
-import { createTableReservation, getTableReservations, splitAndPayTableReservation } from '../../api/tableReservations';
+import { createTableReservation, getTableReservations, splitAndPayTableReservation, updateReserverCoveredCount } from '../../api/tableReservations';
 import { postEventComment } from '../../api/comments';
 
 type Route = RouteProp<DiscoverStackParamList, 'EventDetail'>;
@@ -90,6 +90,17 @@ export default function EventDetailScreen() {
     if (!reservation || !event) return;
     const link = kind === 'free' ? reservation.freeInviteLink : reservation.splitInviteLink;
     await Share.share({ message: `${event.title} table invite: ${link}`, url: link });
+  };
+
+  const setReserverCovered = async (next: number) => {
+    if (!reservation) return;
+    const clamped = Math.max(1, Math.min(reservation.partySize, Math.floor(next)));
+    if (clamped === reservation.reserverCoveredCount) return;
+    try {
+      setReservation(await updateReserverCoveredCount(reservation.id, clamped));
+    } catch (err: any) {
+      Alert.alert('Error', err?.response?.data?.error || 'Could not update how many you cover.');
+    }
   };
 
   const splitAndPay = async () => {
@@ -238,14 +249,50 @@ export default function EventDetailScreen() {
                       <Button label="Free Invite" onPress={() => shareLink('free')} variant="outline" size="sm" style={styles.linkButton} />
                       <Button label="Split Invite" onPress={() => shareLink('split')} variant="outline" size="sm" style={styles.linkButton} />
                     </View>
-                    {reservation.invites.map((invite) => (
-                      <View key={invite.id} style={styles.inviteRow}>
-                        <Text style={styles.inviteName}>{invite.displayName || invite.email || 'Invitee'}</Text>
-                        <Text style={styles.inviteStatus}>
-                          {invite.attendanceStatus}{invite.paymentExpected || invite.proposedToPay ? ` - ${invite.paymentStatus}` : ' - no split'}
+                    <View style={styles.coverRow}>
+                      <Text style={styles.coverLabel}>You're paying for</Text>
+                      <View style={styles.stepper}>
+                        <TouchableOpacity
+                          onPress={() => setReserverCovered(reservation.reserverCoveredCount - 1)}
+                          disabled={reservation.reserverCoveredCount <= 1}
+                          style={[styles.stepperBtn, reservation.reserverCoveredCount <= 1 && styles.stepperBtnDisabled]}
+                        >
+                          <Ionicons name="remove" size={18} color="#fff" />
+                        </TouchableOpacity>
+                        <Text style={styles.stepperValue}>{reservation.reserverCoveredCount}</Text>
+                        <TouchableOpacity
+                          onPress={() => setReserverCovered(reservation.reserverCoveredCount + 1)}
+                          disabled={reservation.reserverCoveredCount >= reservation.partySize}
+                          style={[styles.stepperBtn, reservation.reserverCoveredCount >= reservation.partySize && styles.stepperBtnDisabled]}
+                        >
+                          <Ionicons name="add" size={18} color="#fff" />
+                        </TouchableOpacity>
+                      </View>
+                      <Text style={styles.coverHint}>{reservation.reserverCoveredCount === 1 ? 'person' : 'people'} (incl. you)</Text>
+                    </View>
+                    {reservation.summary?.coverageWarning && (
+                      <View style={styles.coverageWarning}>
+                        <Ionicons name="warning" size={16} color="#fbbf24" />
+                        <Text style={styles.coverageWarningText}>
+                          {(reservation.summary?.coveredCount ?? 0)} of {reservation.partySize} covered
+                          {(reservation.summary?.coverageGap ?? 0) > 0
+                            ? ` - ${reservation.summary?.coverageGap} still unassigned`
+                            : ` - ${Math.abs(reservation.summary?.coverageGap ?? 0)} overlap, resolve manually`}
                         </Text>
                       </View>
-                    ))}
+                    )}
+                    {reservation.invites.map((invite) => {
+                      const isPayer = invite.paymentExpected || invite.proposedToPay;
+                      return (
+                        <View key={invite.id} style={styles.inviteRow}>
+                          <Text style={styles.inviteName}>{invite.displayName || invite.email || 'Invitee'}</Text>
+                          <Text style={styles.inviteStatus}>
+                            {invite.attendanceStatus}
+                            {isPayer ? ` - ${invite.paymentStatus} - paying for ${invite.coveredCount}` : ' - no split'}
+                          </Text>
+                        </View>
+                      );
+                    })}
                     <Button label="Split and Pay" onPress={splitAndPay} loading={splitLoading} disabled={reservation.status === 'paid'} />
                   </>
                 ) : (
@@ -368,6 +415,25 @@ const styles = StyleSheet.create({
   inviteRow: { borderTopWidth: 1, borderTopColor: '#1e1e2e', paddingTop: 8 },
   inviteName: { color: '#f1f5f9', fontSize: 13, fontWeight: '700' },
   inviteStatus: { color: '#94a3b8', fontSize: 12, marginTop: 2 },
+  coverageWarning: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: 'rgba(251,191,36,0.1)', borderWidth: 1, borderColor: 'rgba(251,191,36,0.3)',
+    borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8, marginTop: 8,
+  },
+  coverageWarningText: { color: '#fbbf24', fontSize: 12, fontWeight: '600', flex: 1 },
+  coverRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: '#0a0a0f', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, gap: 10, marginTop: 8,
+  },
+  coverLabel: { color: '#f1f5f9', fontSize: 13, fontWeight: '700' },
+  coverHint: { color: '#94a3b8', fontSize: 12 },
+  stepper: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  stepperBtn: {
+    width: 32, height: 32, borderRadius: 8, backgroundColor: 'rgba(168,85,247,0.25)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  stepperBtnDisabled: { opacity: 0.35 },
+  stepperValue: { color: '#f1f5f9', fontSize: 16, fontWeight: '800', minWidth: 24, textAlign: 'center' },
   inputRow: { flexDirection: 'row', gap: 10 },
   input: { flex: 1, color: '#f1f5f9', backgroundColor: '#0a0a0f', borderWidth: 1, borderColor: '#1e1e2e', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
 });

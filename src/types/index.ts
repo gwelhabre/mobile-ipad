@@ -205,6 +205,7 @@ export interface TableReservationInvite {
   paymentExpected: boolean;
   proposedToPay: boolean;
   paymentStatus: 'not_required' | 'accepted' | 'proposed' | 'paid' | 'unfunded' | 'declined';
+  coveredCount: number;
   shareAmount?: number;
   respondedAt?: string;
   paidAt?: string;
@@ -215,6 +216,7 @@ export interface TableReservation {
   eventId: string;
   venueId: string;
   partySize: number;
+  reserverCoveredCount: number;
   tableFee: number;
   currency: string;
   status: 'pending_confirmations' | 'split_pending' | 'paid' | 'cancelled' | 'expired';
@@ -233,6 +235,9 @@ export interface TableReservation {
     paidInviteCount: number;
     unpaidInviteCount: number;
     expectedResponses: number;
+    coveredCount: number;
+    coverageGap: number;
+    coverageWarning: boolean;
   };
 }
 
